@@ -3,33 +3,77 @@
 #    ( o.o  )  - v0.0.1
 #      >^<     - by @rUv
 
-from fastapi.security import HTTPBearer, OAuth2AuthorizationCodeBearer
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.responses import RedirectResponse
-import httpx
 import os
-import json
-from fastapi.responses import StreamingResponse
+from dotenv import load_dotenv
 
-# Initialize a new FastAPI application,
-# and use the FASTAPI_SERVER_URL environment variable to specify the server url.
-# If FASTAPI_SERVER_URL is not set, the servers list will be empty,
-# and FastAPI will default to serving the API on http://localhost:8000.
-app = FastAPI(servers=[{"url": os.getenv("FASTAPI_SERVER_URL")}] if os.getenv("FASTAPI_SERVER_URL") else [])
+# Load environment variables
+load_dotenv()
 
-# Set up CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
-)
+API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN")
 
-# Redirects to the automatically generated FastAPI documentation page
+app = FastAPI()
+
+# CORS settings
+if os.getenv("PRODUCTION"):
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["https://your-frontend-domain.com"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"]
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+    )
+
+# Security scheme for bearer with JWT
+security = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != API_BEARER_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing Bearer token"
+        )
+
+# Pydantic model for Component
+class Component(BaseModel):
+    name: str
+    version: str
+    description: str
+    category: str
+    props: dict
+    usage: str
+    dependencies: list[str] = Field(default_factory=list)
+    styles: dict
+    accessibilityFeatures: list[str] = Field(default_factory=list)
+    internationalizationSupport: bool
+    events: dict
+    performanceConsiderations: str
+    securityAspects: str
+    demoLink: str
+    documentationLink: str
+    sourceCodeLink: str
+    license: str
+    author: str
+    lastUpdated: str
+    tags: list[str] = Field(default_factory=list)
+
+@app.post("/components-library")
+def components_library(component: Component, token: HTTPAuthorizationCredentials = Depends(verify_token)):
+    # Add logic to handle adding/updating components in the library
+    return {"message": "Component processed", "component": component}
+
 @app.get("/", include_in_schema=False)
 async def redirect_to_docs():
     return RedirectResponse(url='/docs')
@@ -40,6 +84,85 @@ API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN")
 
 # Security scheme for bearer with JWT
 security = HTTPBearer()
+from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from starlette.responses import RedirectResponse
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN")
+
+app = FastAPI()
+
+# Enhanced CORS settings for production readiness
+if os.getenv("PRODUCTION"):
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["https://your-frontend-domain.com"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"]
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+    )
+
+# Security scheme for bearer with JWT
+security = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != API_BEARER_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing Bearer token"
+        )
+
+# Pydantic model for Component
+class Component(BaseModel):
+    # Define attributes based on your Component Model Attributes
+    name: str
+    version: str
+    description: str
+    # ... other fields ...
+
+@app.post("/components-library")
+def components_library(component: Component, token: HTTPAuthorizationCredentials = Depends(verify_token)):
+    # Logic to handle adding/updating components in the library
+    return {"message": "Component processed", "component": component}
+
+@app.post("/github-webhook")
+async def github_webhook(request: Request, token: HTTPAuthorizationCredentials = Depends(verify_token)):
+    webhook_payload = await request.json()
+    # Process the webhook payload
+    return {"message": "Webhook received", "data": webhook_payload}
+
+@app.get("/", include_in_schema=False)
+async def redirect_to_docs():
+    return RedirectResponse(url='/docs')
+
+# Other routes as necessary...
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != API_BEARER_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing Bearer token"
+        )
+
+@app.get("/secure-endpoint")
+def secure_endpoint(token: HTTPAuthorizationCredentials = Depends(verify_token)):
+    return {"message": "Secure endpoint accessed"}
+
 
 # Uncomment the lines below and comment out the line above if you want to use OAuth2 with Authorization Code flow
 # You will also need to set up redirection endpoint and provide your client id, client secret, 
